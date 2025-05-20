@@ -1,0 +1,140 @@
+import socket
+import json
+import secrets
+import datetime
+import threading
+
+# TCPデータ構造:
+# operation = "操作コード(1 or 2)"
+# state = "状態コード(0 ~ 2)"
+# room_name = "ルーム名"
+# operation_payload = {
+#     user_name = "ユーザー名"
+#     token = "トークン"
+#     password = "パスワード(平文)"
+#     status = "ステータスコード"
+# }
+
+# rooms_list = {
+#     "ルーム名A": {
+#         "members": {
+#             "トークン1": ("クライアント1のIPアドレス", UDPポート番号)
+#             "トークン2": ("クライアント2のIPアドレス", UDPポート番号)
+#         },
+#         "password": "パスワード(平文)"
+#     },
+#     "ルーム名B": {
+#         "members": {
+#             "トークン3": ("クライアント3のIPアドレス", UDPポート番号)
+#             "トークン4": ("クライアント4のIPアドレス", UDPポート番号)
+#         },
+#         "password": "パスワード(平文)"
+#     }
+# }
+
+# token_list = {
+#     "トークン1": {
+#         "room_name": "ルーム名A",
+#         "user_name": "ユーザー名",
+#         "last_access": datetime.datetime.now(), # 最終メッセージ送信時刻
+#         "is_host": True  # ホスト
+#     },
+#     "トークン2": {
+#         "room_name": "ルーム名A",
+#         "user_name": "ユーザー名",
+#         "last_access": datetime.datetime.now(), # 最終メッセージ送信時刻
+#         "is_host": False # ホストではない
+#     },
+#     ...
+# }
+
+# TCPサーバー
+
+class TCPServer:
+    def __init__(self, address, port):
+        self.address = address
+        self.port = port
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind((self.address, self.port))
+        self.sock.listen()
+
+    def recieve_request(self):
+        print(f"TCPサーバー起動 {self.address}:{self.port}")
+        while True:
+            client_socket, client_address = self.sock.accept()
+            print(f"{client_address} から接続")
+
+            header_data = client_socket.recv(32)
+
+            # 以下ヘッダー・ボディのデコードのテスト
+
+            # ヘッダーのデコード
+            # room_name_len = int.from_bytes(header_data[0:1], "big")
+            # operation = int.from_bytes(header_data[1:2], "big")
+            # state = int.from_bytes(header_data[2:3], "big")
+            # operation_payload_len = int.from_bytes(header_data[3:32], "big")
+
+            # print(f"room_name_len: {room_name_len}")
+            # print(f"operation: {operation}")
+            # print(f"state: {state}")
+            # print(f"operation_payload_len: {operation_payload_len}")
+
+            # room_name_bytes = client_socket.recv(room_name_len)
+
+            # ルームネームのデコード
+            # room_name = room_name_bytes.decode("utf-8")
+            # print(f"room_name: {room_name}")
+
+            # オペレーションペイロードのデコード
+            # operation_payload_bytes = client_socket.recv(operation_payload_len)
+            # operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))
+            # print(f"operation_payload: {operation_payload}")
+
+
+            client_socket.sendall(header_data)
+            client_socket.close()
+
+    def send_response(self, data):
+        self.sock.sendall(data)
+
+    def close(self):
+        self.sock.close()
+
+
+# UDPサーバー
+
+class UDPServer:
+    def __init__(self, address, port):
+        self.room_list = {}
+        self.token_list = {}
+
+        self.address = address
+        self.port = port
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind((self.address, self.port))
+
+    def start(self):
+        print(f"UDPサーバー起動 {self.address}:{self.port}")
+        while True:
+            data, addr = self.sock.recvfrom(1024)
+            print(f"{addr}: {data} を受信(UDP)")
+            self.sock.sendto(b"Hello, client!", addr)
+
+    def close(self):
+        self.sock.close()
+
+
+if __name__ == "__main__":
+
+# TCP通信の実行
+    tcp_server = TCPServer("127.0.0.1", 8080)
+    tcp_thread = threading.Thread(target=tcp_server.recieve_request)
+    tcp_thread.start()
+
+# UDP通信の実行
+    udp_server = UDPServer("127.0.0.1", 8080)
+    udp_thread = threading.Thread(target=udp_server.start)
+    udp_thread.start()
+
+    tcp_thread.join()
+    udp_thread.join()
