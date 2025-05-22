@@ -90,7 +90,6 @@ class TCPServer:
             # operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))
             # print(f"operation_payload: {operation_payload}")
 
-
             client_socket.sendall(header_data)
             client_socket.close()
 
@@ -118,7 +117,7 @@ class UDPServer:
         while True:
             data, addr = self.sock.recvfrom(1024)
             print(f"{addr}: {data} を受信(UDP)")
-            self.sock.sendto(b"Hello, client!", addr)
+            self.sock.sendto(b"UDPServer: Hello, client!", addr)
 
     def close(self):
         self.sock.close()
@@ -126,12 +125,12 @@ class UDPServer:
 
 if __name__ == "__main__":
 
-# TCP通信の実行
+# TCPサーバーの実行
     tcp_server = TCPServer("127.0.0.1", 8080)
     tcp_thread = threading.Thread(target=tcp_server.recieve_request)
     tcp_thread.start()
 
-# UDP通信の実行
+# UDPサーバーの実行
     udp_server = UDPServer("127.0.0.1", 8080)
     udp_thread = threading.Thread(target=udp_server.start)
     udp_thread.start()

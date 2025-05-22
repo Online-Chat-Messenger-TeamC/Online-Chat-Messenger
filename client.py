@@ -88,7 +88,6 @@ class UDPClient:
         self.address = address
         self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.connect((self.address, self.port))
 
     def send(self, data):
         self.sock.sendto(data, (self.address, self.port))
@@ -113,7 +112,7 @@ if __name__ == "__main__":
     room_name, password = tcp_client.input_room_name_and_password(operation)
 
     # 状態コード
-    state = 0
+    state = "0"
 
     data = tcp_client.make_tcp_request(room_name, operation, state, user_name, password)
 
@@ -128,6 +127,6 @@ if __name__ == "__main__":
 
     # UDPクライアントの実行
     udp_client = UDPClient("127.0.0.1", 8080)
-    udp_client.send(b"Hello, server!")
+    udp_client.send(b"UDPClient: Hello, server!")
     print(udp_client.receive())
     udp_client.close()
