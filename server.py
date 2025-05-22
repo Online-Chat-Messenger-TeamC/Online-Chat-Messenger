@@ -64,7 +64,41 @@ class TCPServer:
             client_socket, client_address = self.sock.accept()
             print(f"{client_address} から接続")
 
-            header_data = client_socket.recv(32)
+            try:
+                header_data = client_socket.recv(32)
+                if not header_data or len(header_data) < 32:
+                    print("無効なヘッダー")
+                    client_socket.close()
+                    continue
+
+                room_name_len = int.from_bytes(header_data[0:1], "big")
+                operation = int.from_bytes(header_data[1:2], "big")
+                state = int.from_bytes(header_data[2:3], "big")
+                operation_payload_len = int.from_bytes(header_data[3:32], "big")
+
+                room_name_bytes = client_socket.recv(room_name_len)
+                room_name = room_name_bytes.decode("utf-8")
+
+                operation_payload_bytes = client_socket.recv(operation_payload_len)
+                operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))
+
+                print(f"データ受信: room_name={room_name}, operation={operation}, state={state}, payload={operation_payload}")
+
+                response = {
+                    "message": f"{room_name} に対する操作を受け付けました。",
+                    "operation": operation,
+                    "state": state,
+                    "user_name": operation_payload.get("user_name")
+                }
+
+                response_data = json.dumps(response).encode("utf-8")
+                client_socket.sendall(response_data)
+
+            except Exception as err:
+                print(f"エラー：{err}")
+
+            finally:
+                client_socket.close()
 
             # 以下ヘッダー・ボディのデコードのテスト
 
@@ -90,8 +124,6 @@ class TCPServer:
             # operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))
             # print(f"operation_payload: {operation_payload}")
 
-            client_socket.sendall(header_data)
-            client_socket.close()
 
     def send_response(self, data):
         self.sock.sendall(data)
@@ -117,7 +149,7 @@ class UDPServer:
         while True:
             data, addr = self.sock.recvfrom(1024)
             print(f"{addr}: {data} を受信(UDP)")
-            self.sock.sendto(b"UDPServer: Hello, client!", addr)
+            self.sock.sendto(b"UDPServerHello, client!", addr)
 
     def close(self):
         self.sock.close()
