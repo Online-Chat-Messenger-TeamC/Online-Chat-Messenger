@@ -86,13 +86,24 @@ class TCPServer:
                 operation_payload_bytes = client_socket.recv(operation_payload_len)
                 operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))
 
-                print(f"データ受信: room_name={room_name}, operation={operation}, state={state}, payload={operation_payload}")
+                #print(f"データ受信: room_name={room_name}, operation={operation}, state={state}, payload={operation_payload}")
 
                 response = {}
+                
                 user_name = operation_payload.get("user_name")
                 password = operation_payload.get("password", "")
                 token = operation_payload.get("token", None)
                 udp_port = operation_payload.get("udp_port", None)
+
+                print("-------- リクエスト元のクライアント情報 --------")
+                print(f"接続元: {client_address[0]}:{client_address[1]}")
+                print(f"操作種類: {'ルーム作成' if operation == 1 else 'ルーム参加' if operation == 2 else '不明'}")
+                print(f"ルーム名: {room_name}")
+                print(f"ユーザー名: {user_name}")
+                print(f"パスワード: {password}")
+                print(f"UDPポート: {udp_port}")
+                print(f"受信状態コード: {state}")
+                print("----------------------------------")
 
                 if operation == 1:
                     if room_name in self.rooms_list:
