@@ -169,7 +169,7 @@ class TCPServer:
                             }
 
                             response = {
-                                "message": f"ルーム '{room_name}' に参加hしました。",
+                                "message": f"ルーム '{room_name}' に参加しました。",
                                 "operation": operation,
                                 "status": 2,
                                 "user_name": user_name,
