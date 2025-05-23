@@ -136,7 +136,7 @@ if __name__ == "__main__":
             token = response.get("token")
             print(f"トークン: {token}")
         elif response.get("state") == 1:
-            print("ルーム作成失敗")
+            print("ルーム参加失敗")
     except json.JSONDecodeError:
         print("サーバーからの応答が不正です。内容:", response_data)
       

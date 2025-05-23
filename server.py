@@ -12,7 +12,6 @@ import threading
 #     user_name = "ユーザー名"
 #     token = "トークン"
 #     password = "パスワード(平文)"
-#     status = "ステータスコード"
 # }
 
 # rooms_list = {
@@ -171,18 +170,10 @@ class TCPServer:
                             response = {
                                 "message": f"ルーム '{room_name}' に参加しました。",
                                 "operation": operation,
-                                "status": 2,
+                                "state": 2,
                                 "user_name": user_name,
                                 "token": new_token
                             }
-                        
-                else:
-                    response = {
-                        "message": "無効な操作コードです。",
-                        "operation": operation,
-                        "state": 1,
-                        "user_name": user_name
-                    }
 
                 response_data = json.dumps(response).encode("utf-8")
                 client_socket.sendall(response_data)
