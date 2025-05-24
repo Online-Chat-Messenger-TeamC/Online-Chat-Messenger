@@ -89,10 +89,27 @@ class UDPClient:
         self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    def send(self, data):
-        self.sock.sendto(data, (self.address, self.port))
+    def send_message(self, room_name, token, message):
+        room_name_bytes = room_name.encode("utf-8")
+        token_bytes = token.encode("utf-8")
+        message_bytes = message.encode("utf-8")
+        
+        header = (
+            len(room_name_bytes).to_bytes(1, "big") +
+            len(token_bytes).to_bytes(1, "big")
+        )
+        
+        body = (
+            room_name_bytes +
+            token_bytes +
+            message_bytes
+        )
+        
+        packet = header + body
+        
+        self.sock.sendto(packet, (self.address, self.port))
 
-    def receive(self):
+    def receive_message(self):
         return self.sock.recvfrom(1024)
 
     def close(self):
@@ -145,6 +162,8 @@ if __name__ == "__main__":
 
     # UDPクライアントの実行
     udp_client = UDPClient("127.0.0.1", 8080)
-    udp_client.send(b"UDPClient: Hello, server!")
-    print(udp_client.receive())
-    udp_client.close
+    print(f"{user_name} がルーム {room_name} に参加しました。")
+    
+    while True:
+        message = input(f"{user_name}> ")
+        udp_client.send_message(room_name, token, message)
