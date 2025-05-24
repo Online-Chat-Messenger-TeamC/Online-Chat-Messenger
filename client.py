@@ -11,7 +11,11 @@ class TCPClient:
 
 
     def input_user_name_and_operation(self):
-        user_name = input("ユーザー名を入力してください: ")
+        while True:
+            user_name = input("ユーザー名を入力してください: ")
+            if not user_name:
+                continue
+            break
 
         print("1: ルームを作成")
         print("2: ルームに参加")
@@ -118,50 +122,53 @@ class UDPClient:
 if __name__ == "__main__":
 
     # TCPクライアントの実行
-    tcp_client = TCPClient("127.0.0.1", 8080)
+    while True:
+        tcp_client = TCPClient("127.0.0.1", 8080)
 
-    user_name, operation = tcp_client.input_user_name_and_operation()
+        user_name, operation = tcp_client.input_user_name_and_operation()
 
-    # ユーザー名, 操作コード入力後にTCPサーバーと接続
-    tcp_client.sock.connect((tcp_client.address, tcp_client.port))
+        # ユーザー名, 操作コード入力後にTCPサーバーと接続
+        tcp_client.sock.connect((tcp_client.address, tcp_client.port))
 
-    room_name, password = tcp_client.input_room_name_and_password(operation)
+        room_name, password = tcp_client.input_room_name_and_password(operation)
 
-    # 状態コード
-    state = "0"
+        data = tcp_client.make_tcp_request(room_name, operation, "0", user_name, password)
 
-    data = tcp_client.make_tcp_request(room_name, operation, state, user_name, password)
+        tcp_client.send_request(data)
 
-    tcp_client.send_request(data)
-
-    #data = tcp_client.receive_response()
-    #data = data.decode("utf-8")
-
-    #print(data)
-
-    #サーバからの処理確認用
-
-    response_data = tcp_client.receive_response().decode("utf-8")
-    
-    try:
+        response_data = tcp_client.receive_response().decode("utf-8")
         response = json.loads(response_data)
-        print(response["message"])
+        token = response.get("token")
 
-        if response.get("state") == 2:
-            print("ルーム作成成功")
-            token = response.get("token")
-            print(f"トークン: {token}")
-        elif response.get("state") == 1:
-            print("ルーム参加失敗")
-    except json.JSONDecodeError:
-        print("サーバーからの応答が不正です。内容:", response_data)
-      
+        try:
+            if response.get("state") == 2:
+                print(response.get("message"))
+                print("-------------------------------------------")
+                break
+
+            # ルーム作成を試みたが失敗した場合
+            elif response.get("state") == 1 and response.get("operation") == 1:
+                print(response.get("message"))
+                print("最初からやり直してください")
+                print("-------------------------------------------")
+                continue
+
+            # ルーム参加を試みたが失敗した場合
+            elif response.get("state") == 1 and response.get("operation") == 2:
+                print(response.get("message"))
+                print("最初からやり直してください")
+                print("-------------------------------------------")
+                continue
+
+        except json.JSONDecodeError:
+            print("サーバーからの応答が不正です。内容:", response_data)
+            continue
 
     tcp_client.close()
 
     # UDPクライアントの実行
     udp_client = UDPClient("127.0.0.1", 8080)
-    print(f"{user_name} がルーム {room_name} に参加しました。")
+    print(f"{user_name} がルーム '{room_name}' に参加しました。")
     
     while True:
         message = input(f"{user_name}> ")

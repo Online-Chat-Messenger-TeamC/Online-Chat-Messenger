@@ -78,7 +78,7 @@ class TCPServer:
         print(f"TCPサーバー起動 {self.address}:{self.port}")
         while True:
             client_socket, client_address = self.sock.accept()
-            print(f"{client_address} から接続")
+            print(f"\n{client_address} から接続")
 
             try:
                 header_data = client_socket.recv(32)
@@ -98,25 +98,13 @@ class TCPServer:
                 operation_payload_bytes = client_socket.recv(operation_payload_len)
                 operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))
 
-                #print(f"データ受信: room_name={room_name}, operation={operation}, state={state}, payload={operation_payload}")
 
                 response = {}
-                
+
                 user_name = operation_payload.get("user_name")
                 password = operation_payload.get("password", "")
-                token = operation_payload.get("token", None)
                 udp_port = operation_payload.get("udp_port", None)
 
-                print("-------- リクエスト元のクライアント情報 --------")
-                print(f"接続元: {client_address[0]}:{client_address[1]}")
-                print(f"操作種類: {'ルーム作成' if operation == 1 else 'ルーム参加' if operation == 2 else '不明'}")
-                print(f"ルーム名: {room_name}")
-                print(f"ユーザー名: {user_name}")
-                print(f"パスワード: {password}")
-                print(f"UDPポート: {udp_port}")
-                print(f"受信状態コード: {state}")
-                print("----------------------------------")
-            
                 with list_lock:
                     if operation == 1:
                         if room_name in self.rooms_list:
@@ -189,6 +177,18 @@ class TCPServer:
                                     "token": new_token
                                 }
 
+                print("\n---------- リクエスト元のTCPクライアント情報 ----------")
+                print(f"接続元: ('{client_address[0]}', {client_address[1]})")
+                print(f"操作種類: {'ルーム作成' if operation == 1 else 'ルーム参加' if operation == 2 else '不明'}")
+                print(f"ルーム名: {room_name}")
+                print(f"ユーザー名: {user_name}")
+                print(f"パスワード: {password}")
+                print(f"ホスト: {'True' if operation == 1 else 'False' if operation == 2 else '不明'}")
+                print(f"状態コード: " + str(response.get("state")))
+                print(f"メッセージ: " + str(response.get("message")))
+                print(f"トークン: " + str(response.get("token")))
+                print("------------------------------------------------------")
+
                 response_data = json.dumps(response).encode("utf-8")
                 client_socket.sendall(response_data)
 
@@ -197,30 +197,6 @@ class TCPServer:
 
             finally:
                 client_socket.close()
-
-            # 以下ヘッダー・ボディのデコードのテスト
-
-            # ヘッダーのデコード
-            # room_name_len = int.from_bytes(header_data[0:1], "big")
-            # operation = int.from_bytes(header_data[1:2], "big")
-            # state = int.from_bytes(header_data[2:3], "big")
-            # operation_payload_len = int.from_bytes(header_data[3:32], "big")
-
-            # print(f"room_name_len: {room_name_len}")
-            # print(f"operation: {operation}")
-            # print(f"state: {state}")
-            # print(f"operation_payload_len: {operation_payload_len}")
-
-            # room_name_bytes = client_socket.recv(room_name_len)
-
-            # ルームネームのデコード
-            # room_name = room_name_bytes.decode("utf-8")
-            # print(f"room_name: {room_name}")
-
-            # オペレーションペイロードのデコード
-            # operation_payload_bytes = client_socket.recv(operation_payload_len)
-            # operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))
-            # print(f"operation_payload: {operation_payload}")
 
 
     def send_response(self, data):
