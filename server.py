@@ -245,7 +245,7 @@ class UDPServer:
     def start(self):
         print(f"UDPサーバー起動 {self.address}:{self.port}")
         while True:
-            data, addr = self.sock.recvfrom(1024)
+            data, addr = self.sock.recvfrom(4096)
             print(f"{addr}: {data} を受信(UDP)")
             self.sock.sendto(b"UDPServerHello, client!", addr)
 
