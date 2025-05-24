@@ -47,6 +47,10 @@ import threading
 #     ...
 # }
 
+# ルーム情報とトークン情報のグローバル変数
+rooms_list = {}
+token_list = {}
+
 # TCPサーバー
 
 class TCPServer:
@@ -57,8 +61,8 @@ class TCPServer:
         self.sock.bind((self.address, self.port))
         self.sock.listen()
 
-        self.rooms_list = {}
-        self.token_list = {}
+        self.rooms_list = rooms_list
+        self.token_list = token_list
         
 
     def recieve_request(self):
@@ -220,8 +224,8 @@ class TCPServer:
 
 class UDPServer:
     def __init__(self, address, port):
-        self.room_list = {}
-        self.token_list = {}
+        self.room_list = rooms_list
+        self.token_list = token_list
 
         self.address = address
         self.port = port
