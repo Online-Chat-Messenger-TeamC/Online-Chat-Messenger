@@ -118,10 +118,28 @@ if __name__ == "__main__":
 
     tcp_client.send_request(data)
 
-    data = tcp_client.receive_response()
-    data = data.decode("utf-8")
+    #data = tcp_client.receive_response()
+    #data = data.decode("utf-8")
 
-    print(data)
+    #print(data)
+
+    #サーバからの処理確認用
+
+    response_data = tcp_client.receive_response().decode("utf-8")
+    
+    try:
+        response = json.loads(response_data)
+        print(response["message"])
+
+        if response.get("state") == 2:
+            print("ルーム作成成功")
+            token = response.get("token")
+            print(f"トークン: {token}")
+        elif response.get("state") == 1:
+            print("ルーム参加失敗")
+    except json.JSONDecodeError:
+        print("サーバーからの応答が不正です。内容:", response_data)
+      
 
     tcp_client.close()
 
@@ -129,4 +147,4 @@ if __name__ == "__main__":
     udp_client = UDPClient("127.0.0.1", 8080)
     udp_client.send(b"UDPClient: Hello, server!")
     print(udp_client.receive())
-    udp_client.close()
+    udp_client.close

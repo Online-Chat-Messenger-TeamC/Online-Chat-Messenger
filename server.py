@@ -12,7 +12,6 @@ import threading
 #     user_name = "ユーザー名"
 #     token = "トークン"
 #     password = "パスワード(平文)"
-#     status = "ステータスコード"
 # }
 
 # rooms_list = {
@@ -58,13 +57,132 @@ class TCPServer:
         self.sock.bind((self.address, self.port))
         self.sock.listen()
 
+        self.rooms_list = {}
+        self.token_list = {}
+        
+
     def recieve_request(self):
         print(f"TCPサーバー起動 {self.address}:{self.port}")
         while True:
             client_socket, client_address = self.sock.accept()
             print(f"{client_address} から接続")
 
-            header_data = client_socket.recv(32)
+            try:
+                header_data = client_socket.recv(32)
+                if not header_data or len(header_data) < 32:
+                    print("無効なヘッダー")
+                    client_socket.close()
+                    continue
+
+                room_name_len = int.from_bytes(header_data[0:1], "big")
+                operation = int.from_bytes(header_data[1:2], "big")
+                state = int.from_bytes(header_data[2:3], "big")
+                operation_payload_len = int.from_bytes(header_data[3:32], "big")
+
+                room_name_bytes = client_socket.recv(room_name_len)
+                room_name = room_name_bytes.decode("utf-8")
+
+                operation_payload_bytes = client_socket.recv(operation_payload_len)
+                operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))
+
+                #print(f"データ受信: room_name={room_name}, operation={operation}, state={state}, payload={operation_payload}")
+
+                response = {}
+                
+                user_name = operation_payload.get("user_name")
+                password = operation_payload.get("password", "")
+                token = operation_payload.get("token", None)
+                udp_port = operation_payload.get("udp_port", None)
+
+                print("-------- リクエスト元のクライアント情報 --------")
+                print(f"接続元: {client_address[0]}:{client_address[1]}")
+                print(f"操作種類: {'ルーム作成' if operation == 1 else 'ルーム参加' if operation == 2 else '不明'}")
+                print(f"ルーム名: {room_name}")
+                print(f"ユーザー名: {user_name}")
+                print(f"パスワード: {password}")
+                print(f"UDPポート: {udp_port}")
+                print(f"受信状態コード: {state}")
+                print("----------------------------------")
+
+                if operation == 1:
+                    if room_name in self.rooms_list:
+                        response = {
+                            "message": f"ルーム名 '{room_name}' は存在します。",
+                            "operation": operation,
+                            "state": 1,
+                            "user_name": user_name
+                        }
+                    else:
+                        new_token = secrets.token_urlsafe(32)
+                        now = datetime.datetime.now()
+
+                        self.rooms_list[room_name] = {
+                            "members": {new_token: (client_address[0], udp_port)},
+                            "password": password
+                        }
+
+                        self.token_list[new_token] = {
+                            "room_name": room_name,
+                            "user_name": user_name,
+                            "last_access": now,
+                            "is_host": True
+                        }
+
+                        response = {
+                            "message": f"新しいルーム '{room_name}' を作成しました。",
+                            "operation": operation,
+                            "state": 2,
+                            "user_name": user_name,
+                            "token": new_token
+                        }
+
+                elif operation == 2:
+                    if room_name not in self.rooms_list:
+                        response = {
+                            "message": f"ルーム名 '{room_name}' は存在しません。",
+                            "operation": operation,
+                            "state": 1,
+                            "user_name": user_name
+                        }
+                    else:
+                        room_info = self.rooms_list[room_name]
+
+                        if room_info.get("password") != password:
+                            response = {
+                                "message": "パスワードが違います。",
+                                "operation": operation,
+                                "state": 1,
+                                "user_name": user_name
+                            }
+                        else:
+                            new_token = secrets.token_urlsafe(32)
+                            now = datetime.datetime.now()
+
+                            room_info["members"][new_token] = (client_address[0], udp_port)
+
+                            self.token_list[new_token] = {
+                                "room_name": room_name,
+                                "user_name": user_name,
+                                "last_access": now,
+                                "is_host": False
+                            }
+
+                            response = {
+                                "message": f"ルーム '{room_name}' に参加しました。",
+                                "operation": operation,
+                                "state": 2,
+                                "user_name": user_name,
+                                "token": new_token
+                            }
+
+                response_data = json.dumps(response).encode("utf-8")
+                client_socket.sendall(response_data)
+
+            except Exception as err:
+                print(f"エラー：{err}")
+
+            finally:
+                client_socket.close()
 
             # 以下ヘッダー・ボディのデコードのテスト
 
@@ -90,8 +208,6 @@ class TCPServer:
             # operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))
             # print(f"operation_payload: {operation_payload}")
 
-            client_socket.sendall(header_data)
-            client_socket.close()
 
     def send_response(self, data):
         self.sock.sendall(data)
@@ -117,7 +233,7 @@ class UDPServer:
         while True:
             data, addr = self.sock.recvfrom(1024)
             print(f"{addr}: {data} を受信(UDP)")
-            self.sock.sendto(b"UDPServer: Hello, client!", addr)
+            self.sock.sendto(b"UDPServerHello, client!", addr)
 
     def close(self):
         self.sock.close()
