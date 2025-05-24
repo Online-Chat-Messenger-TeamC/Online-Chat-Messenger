@@ -51,6 +51,15 @@ import threading
 rooms_list = {}
 token_list = {}
 
+# 共有リストアクセス用のロック
+list_lock = threading.Lock()
+
+# UDPクライアントのタイムアウト時間
+UDP_CLIENT_TIME_OUT = 120
+
+# 最終メッセージ送信時間を定期的に確認
+LAST_MESSAGE_TIME = 20
+
 # TCPサーバー
 
 class TCPServer:
@@ -63,7 +72,7 @@ class TCPServer:
 
         self.rooms_list = rooms_list
         self.token_list = token_list
-        
+
 
     def recieve_request(self):
         print(f"TCPサーバー起動 {self.address}:{self.port}")
@@ -107,53 +116,12 @@ class TCPServer:
                 print(f"UDPポート: {udp_port}")
                 print(f"受信状態コード: {state}")
                 print("----------------------------------")
-
-                if operation == 1:
-                    if room_name in self.rooms_list:
-                        response = {
-                            "message": f"ルーム名 '{room_name}' は存在します。",
-                            "operation": operation,
-                            "state": 1,
-                            "user_name": user_name
-                        }
-                    else:
-                        new_token = secrets.token_urlsafe(32)
-                        now = datetime.datetime.now()
-
-                        self.rooms_list[room_name] = {
-                            "members": {new_token: (client_address[0], udp_port)},
-                            "password": password
-                        }
-
-                        self.token_list[new_token] = {
-                            "room_name": room_name,
-                            "user_name": user_name,
-                            "last_access": now,
-                            "is_host": True
-                        }
-
-                        response = {
-                            "message": f"新しいルーム '{room_name}' を作成しました。",
-                            "operation": operation,
-                            "state": 2,
-                            "user_name": user_name,
-                            "token": new_token
-                        }
-
-                elif operation == 2:
-                    if room_name not in self.rooms_list:
-                        response = {
-                            "message": f"ルーム名 '{room_name}' は存在しません。",
-                            "operation": operation,
-                            "state": 1,
-                            "user_name": user_name
-                        }
-                    else:
-                        room_info = self.rooms_list[room_name]
-
-                        if room_info.get("password") != password:
+            
+                with list_lock:
+                    if operation == 1:
+                        if room_name in self.rooms_list:
                             response = {
-                                "message": "パスワードが違います。",
+                                "message": f"ルーム名 '{room_name}' は存在します。",
                                 "operation": operation,
                                 "state": 1,
                                 "user_name": user_name
@@ -162,22 +130,64 @@ class TCPServer:
                             new_token = secrets.token_urlsafe(32)
                             now = datetime.datetime.now()
 
-                            room_info["members"][new_token] = (client_address[0], udp_port)
+                            self.rooms_list[room_name] = {
+                                "members": {new_token: (client_address[0], udp_port)},
+                                "password": password
+                            }
 
                             self.token_list[new_token] = {
                                 "room_name": room_name,
                                 "user_name": user_name,
                                 "last_access": now,
-                                "is_host": False
+                                "is_host": True
                             }
 
                             response = {
-                                "message": f"ルーム '{room_name}' に参加しました。",
+                                "message": f"新しいルーム '{room_name}' を作成しました。",
                                 "operation": operation,
                                 "state": 2,
                                 "user_name": user_name,
                                 "token": new_token
                             }
+
+                    elif operation == 2:
+                        if room_name not in self.rooms_list:
+                            response = {
+                                "message": f"ルーム名 '{room_name}' は存在しません。",
+                                "operation": operation,
+                                "state": 1,
+                                "user_name": user_name
+                            }
+                        else:
+                            room_info = self.rooms_list[room_name]
+
+                            if room_info.get("password") != password:
+                                response = {
+                                    "message": "パスワードが違います。",
+                                    "operation": operation,
+                                    "state": 1,
+                                    "user_name": user_name
+                                }
+                            else:
+                                new_token = secrets.token_urlsafe(32)
+                                now = datetime.datetime.now()
+
+                                room_info["members"][new_token] = (client_address[0], udp_port)
+
+                                self.token_list[new_token] = {
+                                    "room_name": room_name,
+                                    "user_name": user_name,
+                                    "last_access": now,
+                                    "is_host": False
+                                }
+
+                                response = {
+                                    "message": f"ルーム '{room_name}' に参加しました。",
+                                    "operation": operation,
+                                    "state": 2,
+                                    "user_name": user_name,
+                                    "token": new_token
+                                }
 
                 response_data = json.dumps(response).encode("utf-8")
                 client_socket.sendall(response_data)
