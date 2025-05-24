@@ -1,6 +1,17 @@
 import socket
 import json
 
+
+# ユーザー名入力で空白を受け付けない
+def get_empty_input(prompt):
+    while True:
+        user_input = input(prompt).strip()
+        if user_input:
+            return user_input
+        else:
+            print("入力が無効です。もう一度入力してください。\n")
+
+
 # TCPクライアント
 
 class TCPClient:
@@ -12,7 +23,7 @@ class TCPClient:
 
     def input_user_name_and_operation(self):
         while True:
-            user_name = input("ユーザー名を入力してください: ")
+            user_name = get_empty_input("ユーザー名を入力してください: ").strip()
             if not user_name:
                 continue
             break
@@ -32,17 +43,17 @@ class TCPClient:
     def input_room_name_and_password(self, operation):
         while True:
             if operation == "1":
-                room_name = input("作成するルームの名前を入力してください: ")
+                room_name = get_empty_input("作成するルームの名前を入力してください: ")
                 if not room_name:
                     continue
-                password = input("パスワードを設定してください: ")
+                password = input("パスワードを設定してください: ").strip()
                 break
 
             elif operation == "2":
-                room_name = input("参加するルームの名前を入力してください: ")
+                room_name = get_empty_input("参加するルームの名前を入力してください: ")
                 if not room_name:
                     continue
-                password = input("パスワードを入力してください: ")
+                password = input("パスワードを入力してください: ").strip()
                 break
 
         return room_name, password
