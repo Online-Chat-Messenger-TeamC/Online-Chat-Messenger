@@ -122,9 +122,31 @@ class UDPClient:
         packet = header + body
         
         self.sock.sendto(packet, (self.address, self.port))
+    
+    def receive_messages(self):
+        while True:
+            data, _ = self.sock.recvfrom(4096)
+            try:
+                if len(data) < 2:
+                    print("受信パケットが短すぎます。")
+                    continue
 
-    def receive_message(self):
-        return self.sock.recvfrom(1024)
+                room_name_len = data[0]
+                token_len = data[1]
+
+                min_len = 2 + room_name_len + token_len
+                if len(data) < min_len:
+                    print("受信パケットが不完全です。")
+                    continue
+
+                room_name = data[2 : 2 + room_name_len].decode("utf-8")
+                token = data[2 + room_name_len : 2 + room_name_len + token_len].decode("utf-8")
+                message = data[2 + room_name_len + token_len :].decode("utf-8")
+
+                print(f"[{room_name}] {token}: {message}")
+
+            except Exception as e:
+                print(f"受信メッセージ解析エラー: {e}")
 
     def close(self):
         self.sock.close()
@@ -181,7 +203,7 @@ if __name__ == "__main__":
     udp_client = UDPClient("127.0.0.1", 8080)
     print(f"{user_name} がルーム '{room_name}' に参加しました。")
 
-    recv_thread = threading.Thread(target=udp_client.receive_and_print_messages, daemon=True)
+    recv_thread = threading.Thread(target=udp_client.receive_messages, daemon=True)
     recv_thread.start()
     
     while True:
