@@ -222,8 +222,53 @@ class UDPServer:
         print(f"UDPサーバー起動 {self.address}:{self.port}")
         while True:
             data, addr = self.sock.recvfrom(4096)
+            ip, udp_port = addr
             print(f"{addr}: {data} を受信(UDP)")
-            self.sock.sendto(b"UDPServerHello, client!", addr)
+            
+            try:
+                if len(data) < 2:
+                    raise ValueError("パケットが短すぎます。")
+                room_name_len = data[0]
+                token_len = data[1]
+
+                min_len = 2 + room_name_len + token_len
+                if len(data) < min_len:
+                    raise ValueError("パケットが不完全です。")
+
+                room_name_bytes = data[2 : 2 + room_name_len]
+                token_bytes = data[2 + room_name_len : 2 + room_name_len + token_len]
+                message_bytes = data[2 + room_name_len + token_len : ]
+
+                room_name = room_name_bytes.decode("utf-8")
+                token = token_bytes.decode("utf-8")
+                message = message_bytes.decode("utf-8")
+
+                with list_lock:
+                    if token not in self.token_list:
+                        print("無効なトークンのメッセージを受信しました。")
+                        continue
+
+                    #初回メッセージ受信時にクライアントのUDPポートを登録
+                    if room_name not in self.room_list:
+                        self.room_list[room_name] = {"members": {}}
+                    if token not in self.room_list[room_name]["members"]:
+                        self.room_list[room_name]["members"][token] = (ip, udp_port)
+
+                    # メッセージ受信時にlast_accessを更新
+                    self.token_list[token]["last_access"] = datetime.datetime.now()
+
+                    # メッセージを同ルームの他クライアントに送信
+                    for member_token, (member_ip, member_udp_port) in self.room_list[room_name]["members"].items():
+                        if member_token != token:
+                            self.sock.sendto(data, (member_ip, member_udp_port))
+
+                    print(f"{room_name} にメッセージを転送しました: {message}")
+
+
+
+            except Exception as e:
+                print(f"UDP受信エラー: {e}")
+                self.sock.sendto(f"エラー: {str(e)}".encode("utf-8"), addr)
 
     def close(self):
         self.sock.close()
