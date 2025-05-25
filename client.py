@@ -167,7 +167,6 @@ class UDPClient:
     def close(self):
         self.sock.close()
 
-
 if __name__ == "__main__":
 
     # TCPクライアントの実行
