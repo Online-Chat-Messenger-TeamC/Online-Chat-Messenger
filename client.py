@@ -145,7 +145,7 @@ class UDPClient:
                 user_name = data[3 + room_name_len : 3 + room_name_len + user_name_len].decode("utf-8")
                 message = data[min_len:].decode("utf-8")
 
-                # 現在の行を消去してメッセージ表示 → プロンプトを再表示
+                # 現在の行を消去してメッセージ表示しプロンプトを再表示
                 print("\033[2K\r", end="")
                 print(f"{user_name}: {message}")
                 print(f"{self.user_name} :> ", end="", flush=True)
@@ -159,7 +159,7 @@ class UDPClient:
                 message = input(f"{self.user_name} :> ")
                 print("\033[1A\033[2K", end="")
                 print(f"{self.user_name} : {message}")
-                self.send_message(self.room_name, self.user_name, self.token, message)  # ✅ 修正
+                self.send_message(self.room_name, self.user_name, self.token, message)
             except KeyboardInterrupt:
                 print("\n終了します。")
                 break
