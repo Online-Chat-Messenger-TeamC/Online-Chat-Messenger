@@ -103,18 +103,21 @@ class UDPClient:
         self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    def send_message(self, room_name, token, message):
+    def send_message(self, room_name, user_name, token, message):
         room_name_bytes = room_name.encode("utf-8")
         token_bytes = token.encode("utf-8")
+        user_name_bytes = user_name.encode("utf-8")
         message_bytes = message.encode("utf-8")
         
         header = (
             len(room_name_bytes).to_bytes(1, "big") +
+            len(user_name_bytes).to_bytes(1, "big") +
             len(token_bytes).to_bytes(1, "big")
         )
         
         body = (
             room_name_bytes +
+            user_name_bytes +
             token_bytes +
             message_bytes
         )
@@ -132,18 +135,19 @@ class UDPClient:
                     continue
 
                 room_name_len = data[0]
-                token_len = data[1]
+                user_name_len = data[1]
+                token_len = data[2]
 
-                min_len = 2 + room_name_len + token_len
+                min_len = 3 + room_name_len + user_name_len + token_len
                 if len(data) < min_len:
                     print("受信パケットが不完全です。")
                     continue
 
-                room_name = data[2 : 2 + room_name_len].decode("utf-8")
-                token = data[2 + room_name_len : 2 + room_name_len + token_len].decode("utf-8")
-                message = data[2 + room_name_len + token_len :].decode("utf-8")
+                room_name = data[3 : 3 + room_name_len].decode("utf-8")
+                user_name = data[3 + room_name_len : 3 + room_name_len + user_name_len].decode("utf-8")
+                message = data[min_len:].decode("utf-8")
 
-                print(f"[{room_name}] {token}: {message}")
+                print(f"{user_name}: {message}")
 
             except Exception as e:
                 print(f"受信メッセージ解析エラー: {e}")
@@ -206,8 +210,8 @@ if __name__ == "__main__":
     recv_thread = threading.Thread(target=udp_client.receive_messages, daemon=True)
     recv_thread.start()
 
-    udp_client.send_message(room_name, token, "")
+    udp_client.send_message(room_name, user_name, token, "")
     
     while True:
         message = input(f"{user_name}> ")
-        udp_client.send_message(room_name, token, message)
+        udp_client.send_message(room_name, user_name, token, message)

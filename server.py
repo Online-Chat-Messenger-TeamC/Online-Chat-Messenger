@@ -233,18 +233,21 @@ class UDPServer:
                     continue
 
                 room_name_len = data[0]
-                token_len = data[1]
+                user_name_len = data[1]
+                token_len = data[2]
 
                 min_len = 2 + room_name_len + token_len
                 if len(data) < min_len:
                     print("パケットが不完全です。")
                     continue
 
-                room_name_bytes = data[2 : 2 + room_name_len]
-                token_bytes = data[2 + room_name_len : 2 + room_name_len + token_len]
-                message_bytes = data[2 + room_name_len + token_len : ]
+                room_name_bytes = data[3 : 3 + room_name_len]
+                user_name_bytes = data[3 + room_name_len : 3 + room_name_len + user_name_len]
+                token_bytes = data[3 + room_name_len + user_name_len : 3 + room_name_len + user_name_len + token_len]
+                message_bytes = data[3 + room_name_len + user_name_len + token_len :]
 
                 room_name = room_name_bytes.decode("utf-8")
+                user_name = user_name_bytes.decode("utf-8")
                 token = token_bytes.decode("utf-8")
                 message = message_bytes.decode("utf-8")
 
@@ -265,7 +268,8 @@ class UDPServer:
                         if member_token != token:
                             self.sock.sendto(data, (member_ip, member_udp_port))
 
-                    print(f"{room_name} にメッセージを転送しました: {message}")
+                    print(f"{user_name}: {message}")
+                    print(f"{room_name} にメッセージを転送しました")
 
 
 
