@@ -128,29 +128,41 @@ class UDPClient:
     
     def receive_messages(self):
         while True:
-            data, _ = self.sock.recvfrom(4096)
             try:
-                if len(data) < 2:
-                    print("受信パケットが短すぎます。")
+                data, _ = self.sock.recvfrom(4096)
+                if len(data) < 3:
                     continue
 
                 room_name_len = data[0]
                 user_name_len = data[1]
                 token_len = data[2]
-
                 min_len = 3 + room_name_len + user_name_len + token_len
+
                 if len(data) < min_len:
-                    print("受信パケットが不完全です。")
                     continue
 
                 room_name = data[3 : 3 + room_name_len].decode("utf-8")
                 user_name = data[3 + room_name_len : 3 + room_name_len + user_name_len].decode("utf-8")
                 message = data[min_len:].decode("utf-8")
 
+                # 現在の行を消去してメッセージ表示 → プロンプトを再表示
+                print("\033[2K\r", end="")
                 print(f"{user_name}: {message}")
+                print(f"{self.user_name} :> ", end="", flush=True)
 
             except Exception as e:
-                print(f"受信メッセージ解析エラー: {e}")
+                print(f"\n[受信エラー]: {e}")
+
+    def input_loop(self):
+        while True:
+            try:
+                message = input(f"{self.user_name} :> ")
+                print("\033[1A\033[2K", end="")
+                print(f"{self.user_name} : {message}")
+                self.send_message(self.room_name, self.user_name, self.token, message)  # ✅ 修正
+            except KeyboardInterrupt:
+                print("\n終了します。")
+                break
 
     def close(self):
         self.sock.close()
@@ -205,13 +217,18 @@ if __name__ == "__main__":
 
     # UDPクライアントの実行
     udp_client = UDPClient("127.0.0.1", 8080)
+
+    udp_client.user_name = user_name
+    udp_client.room_name = room_name
+    udp_client.token = token
+    
     print(f"{user_name} がルーム '{room_name}' に参加しました。")
 
     recv_thread = threading.Thread(target=udp_client.receive_messages, daemon=True)
     recv_thread.start()
 
     udp_client.send_message(room_name, user_name, token, "")
-    
-    while True:
-        message = input(f"{user_name}> ")
-        udp_client.send_message(room_name, user_name, token, message)
+
+    udp_client.input_loop()
+
+    udp_client.close()

@@ -269,7 +269,7 @@ class UDPServer:
                             self.sock.sendto(data, (member_ip, member_udp_port))
 
                     print(f"{user_name}: {message}")
-                    print(f"{room_name} にメッセージを転送しました")
+                    print(f"{room_name} にメッセージを転送しました: {user_name}: {message}")
 
 
 
