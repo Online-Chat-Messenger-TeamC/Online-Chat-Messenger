@@ -1,6 +1,6 @@
 import socket
 import json
-
+import threading
 
 # ユーザー名入力で空白を受け付けない
 def get_empty_input(prompt):
@@ -180,6 +180,9 @@ if __name__ == "__main__":
     # UDPクライアントの実行
     udp_client = UDPClient("127.0.0.1", 8080)
     print(f"{user_name} がルーム '{room_name}' に参加しました。")
+
+    recv_thread = threading.Thread(target=udp_client.receive_and_print_messages, daemon=True)
+    recv_thread.start()
     
     while True:
         message = input(f"{user_name}> ")

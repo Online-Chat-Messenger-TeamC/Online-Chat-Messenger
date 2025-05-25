@@ -224,16 +224,21 @@ class UDPServer:
             data, addr = self.sock.recvfrom(4096)
             ip, udp_port = addr
             print(f"{addr}: {data} を受信(UDP)")
+            print(f"受信データ: {data} (長さ: {len(data)})")
+
             
             try:
-                if len(data) < 2:
-                    raise ValueError("パケットが短すぎます。")
+                if not data or len(data) < 2:
+                    print("パケットが短すぎます。")
+                    continue
+
                 room_name_len = data[0]
                 token_len = data[1]
 
                 min_len = 2 + room_name_len + token_len
                 if len(data) < min_len:
-                    raise ValueError("パケットが不完全です。")
+                    print("パケットが不完全です。")
+                    continue
 
                 room_name_bytes = data[2 : 2 + room_name_len]
                 token_bytes = data[2 + room_name_len : 2 + room_name_len + token_len]
