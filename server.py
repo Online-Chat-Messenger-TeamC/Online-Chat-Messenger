@@ -254,9 +254,7 @@ class UDPServer:
                         continue
 
                     #初回メッセージ受信時にクライアントのUDPポートを登録
-                    if room_name not in self.room_list:
-                        self.room_list[room_name] = {"members": {}}
-                    if token not in self.room_list[room_name]["members"]:
+                    if self.room_list[room_name]["members"][token] == (ip, None):
                         self.room_list[room_name]["members"][token] = (ip, udp_port)
 
                     # メッセージ受信時にlast_accessを更新

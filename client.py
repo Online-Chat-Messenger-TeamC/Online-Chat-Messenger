@@ -205,6 +205,8 @@ if __name__ == "__main__":
 
     recv_thread = threading.Thread(target=udp_client.receive_messages, daemon=True)
     recv_thread.start()
+
+    udp_client.send_message(room_name, token, "")
     
     while True:
         message = input(f"{user_name}> ")
