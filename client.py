@@ -226,7 +226,7 @@ if __name__ == "__main__":
     recv_thread = threading.Thread(target=udp_client.receive_messages, daemon=True)
     recv_thread.start()
 
-    udp_client.send_message(room_name, user_name, token, "")
+    udp_client.send_message(room_name, user_name, token, f"{user_name} がルームに参加しました")
 
     udp_client.input_loop()
 
