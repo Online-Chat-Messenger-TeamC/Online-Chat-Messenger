@@ -55,10 +55,10 @@ token_list = {}
 list_lock = threading.Lock()
 
 # UDPクライアントのタイムアウト時間
-UDP_CLIENT_TIME_OUT = 12
+UDP_CLIENT_TIME_OUT = 15 # デバッグ用に一時的に短縮
 
 # 最終メッセージ送信時間を定期的に確認
-LAST_MESSAGE_TIME = 5
+LAST_MESSAGE_TIME = 5 # デバッグ用に一時的に短縮
 
 # TCPサーバー
 
@@ -227,26 +227,7 @@ class UDPServer:
             data, addr = self.sock.recvfrom(4096)
             print(f"{addr}: {data} を受信(UDP)")
             self.sock.sendto(b"UDPServerHello, client!", addr)
-
-            room_name_len = int.from_bytes(data[:1], "big")
-            token_len = int.from_bytes(data[1:2], "big")
-
-            # data から抽出する範囲を指定
-            room_name_start = 2
-            room_name_end = room_name_start + room_name_len
-            token_start = room_name_end
-            token_end = token_start + token_len
-
-            room_name = data[room_name_start:room_name_end].decode("utf-8")
-            token = data[token_start:token_end].decode("utf-8")
-            message = data[token_end:].decode("utf-8")
-
-            if token in self.token_list:
-                with list_lock:
-                    self.token_list[token]["last_access"] = datetime.datetime.now()
-            else:
-                print("token が存在しません\n")
-
+            
     def cleanup_inactive_clients(self):
         while True:
             with list_lock:
