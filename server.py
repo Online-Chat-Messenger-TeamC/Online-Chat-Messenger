@@ -55,10 +55,10 @@ token_list = {}
 list_lock = threading.Lock()
 
 # UDPクライアントのタイムアウト時間
-UDP_CLIENT_TIME_OUT = 120
+UDP_CLIENT_TIME_OUT = 12
 
 # 最終メッセージ送信時間を定期的に確認
-LAST_MESSAGE_TIME = 20
+LAST_MESSAGE_TIME = 5
 
 # TCPサーバー
 
@@ -220,10 +220,73 @@ class UDPServer:
 
     def start(self):
         print(f"UDPサーバー起動 {self.address}:{self.port}")
+        self.cleanup_thread = threading.Thread(target=self.cleanup_inactive_clients, daemon=True)
+        self.cleanup_thread.start()
+        
         while True:
             data, addr = self.sock.recvfrom(4096)
             print(f"{addr}: {data} を受信(UDP)")
             self.sock.sendto(b"UDPServerHello, client!", addr)
+
+            room_name_len = int.from_bytes(data[:1], "big")
+            token_len = int.from_bytes(data[1:2], "big")
+
+            # data から抽出する範囲を指定
+            room_name_start = 2
+            room_name_end = room_name_start + room_name_len
+            token_start = room_name_end
+            token_end = token_start + token_len
+
+            room_name = data[room_name_start:room_name_end].decode("utf-8")
+            token = data[token_start:token_end].decode("utf-8")
+            message = data[token_end:].decode("utf-8")
+
+            if token in self.token_list:
+                with list_lock:
+                    self.token_list[token]["last_access"] = datetime.datetime.now()
+            else:
+                print("token が存在しません\n")
+
+    def cleanup_inactive_clients(self):
+        while True:
+            with list_lock:
+                now = datetime.datetime.now()
+                tokens_to_remove = [] # 非アクティブな client を格納
+                for token, info in list(self.token_list.items()):
+                    last_access = info.get("last_access")
+                    if (last_access) and (now - last_access).total_seconds() > UDP_CLIENT_TIME_OUT:
+                        tokens_to_remove.append(token)
+                
+                # 削除する client を1人ずつ処理
+                for token in tokens_to_remove:
+                    if token in self.token_list:
+                        client_info = self.token_list[token]
+                        room_name = client_info["room_name"]
+                        user_name = client_info["user_name"]
+                        is_host = client_info["is_host"]
+                        print(f"クライアント '{user_name}' (token: {token}) をルーム '{room_name}' から削除します（タイムアウト {UDP_CLIENT_TIME_OUT}秒)。")
+
+                        if room_name in self.room_list and token in self.room_list[room_name]["members"]:
+                            del self.room_list[room_name]["members"][token]
+
+                            if is_host:
+                                print(f"ホストが退出したため、ルーム '{room_name}' を削除します。")
+                                members_in_room = list(self.room_list[room_name]["members"].keys())
+                                for member_token in members_in_room:
+                                    if member_token in self.token_list:
+                                        del self.token_list[member_token]
+
+                                del self.room_list[room_name]
+
+                        elif not self.room_list[room_name]["members"]:
+                            print(f"ルーム '{room_name}' のメンバーがいなくなったため、ルームを削除します。")
+                            del self.room_list[room_name]
+
+                    del self.token_list[token]
+            
+            threading.Event().wait(LAST_MESSAGE_TIME)
+
+
 
     def close(self):
         self.sock.close()
