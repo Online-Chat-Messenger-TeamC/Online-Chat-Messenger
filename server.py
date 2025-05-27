@@ -313,11 +313,6 @@ class UDPServer:
 
                                 del self.room_list[room_name]
 
-                        # 削除した人が最後の1人の場合
-                        elif not self.room_list[room_name]["members"]:
-                            print(f"ルーム '{room_name}' のメンバーがいなくなったため、ルームを削除します。")
-                            del self.room_list[room_name]
-
                     del self.token_list[token]
             
             threading.Event().wait(LAST_MESSAGE_TIME)
