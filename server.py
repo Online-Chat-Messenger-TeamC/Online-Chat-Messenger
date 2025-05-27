@@ -4,15 +4,6 @@ import secrets
 import datetime
 import threading
 
-# TCPデータ構造:
-# operation = "操作コード(1 or 2)"
-# state = "状態コード(0 ~ 2)"
-# room_name = "ルーム名"
-# operation_payload = {
-#     user_name = "ユーザー名"
-#     token = "トークン"
-#     password = "パスワード(平文)"
-# }
 
 # rooms_list = {
 #     "ルーム名A": {

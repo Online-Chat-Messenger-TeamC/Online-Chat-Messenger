@@ -3,6 +3,32 @@ import json
 import threading
 
 
+# TCPデータ構造:
+# operation = "操作コード(1 or 2)"
+# state = "状態コード(0 ~ 2)"
+# room_name = "ルーム名"
+# operation_payload = {
+#     user_name = "ユーザー名"
+#     token = "トークン"
+#     password = "パスワード(平文)"
+# }
+
+# UDPデータ構造:
+# header = (
+#     # RoomNameSize + UserNameSize + TokenSize
+#     len(room_name_bytes).to_bytes(1, "big") +
+#     len(user_name_bytes).to_bytes(1, "big") +
+#     len(token_bytes).to_bytes(1, "big")
+# )
+# body = (
+#     # RoomName + UserName + Token + Message
+#     room_name_bytes +
+#     user_name_bytes +
+#     token_bytes +
+#     message_bytes
+# )
+
+
 # ユーザー名入力で空白を受け付けない
 def get_empty_input(prompt):
     while True:
