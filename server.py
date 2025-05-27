@@ -220,6 +220,9 @@ class UDPServer:
 
     def start(self):
         print(f"UDPサーバー起動 {self.address}:{self.port}")
+        self.cleanup_thread = threading.Thread(target=self.cleanup_inactive_clients, daemon=True)
+        self.cleanup_thread.start()
+        
         while True:
             data, addr = self.sock.recvfrom(4096)
             ip, udp_port = addr
@@ -276,6 +279,45 @@ class UDPServer:
             except Exception as e:
                 print(f"UDP受信エラー: {e}")
                 self.sock.sendto(f"エラー: {str(e)}".encode("utf-8"), addr)
+            
+    def cleanup_inactive_clients(self):
+        while True:
+            with list_lock:
+                now = datetime.datetime.now()
+                tokens_to_remove = [] # 非アクティブな client を格納
+                for token, info in list(self.token_list.items()):
+                    last_access = info.get("last_access")
+                    if (last_access) and (now - last_access).total_seconds() > UDP_CLIENT_TIME_OUT:
+                        tokens_to_remove.append(token)
+                
+                # 削除する client を1人ずつ処理
+                for token in tokens_to_remove:
+                    if token in self.token_list:
+                        client_info = self.token_list[token]
+                        room_name = client_info["room_name"]
+                        user_name = client_info["user_name"]
+                        is_host = client_info["is_host"]
+                        print(f"クライアント '{user_name}' (token: {token}) をルーム '{room_name}' から削除します（タイムアウト {UDP_CLIENT_TIME_OUT}秒)。")
+
+                        # room_list から特定のクライアントのトークンを削除
+                        if room_name in self.room_list and token in self.room_list[room_name]["members"]:
+                            del self.room_list[room_name]["members"][token]
+
+                            if is_host:
+                                print(f"ホストが退出したため、ルーム '{room_name}' を削除します。")
+                                members_in_room = list(self.room_list[room_name]["members"].keys())
+                                # ホストが退出したルームのメンバーをすべて削除
+                                for member_token in members_in_room:
+                                    if member_token in self.token_list:
+                                        del self.token_list[member_token]
+
+                                del self.room_list[room_name]
+
+                    del self.token_list[token]
+            
+            threading.Event().wait(LAST_MESSAGE_TIME)
+
+
 
     def close(self):
         self.sock.close()
