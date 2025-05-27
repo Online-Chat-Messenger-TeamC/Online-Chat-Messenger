@@ -2,6 +2,7 @@ import socket
 import json
 import threading
 
+
 # ユーザー名入力で空白を受け付けない
 def get_empty_input(prompt):
     while True:
@@ -14,12 +15,12 @@ def get_empty_input(prompt):
 
 # TCPクライアント
 
+
 class TCPClient:
     def __init__(self, address, port):
         self.address = address
         self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
 
     def input_user_name_and_operation(self):
         while True:
@@ -39,7 +40,6 @@ class TCPClient:
 
         return user_name, operation
 
-
     def input_room_name_and_password(self, operation):
         while True:
             if operation == "1":
@@ -58,13 +58,14 @@ class TCPClient:
 
         return room_name, password
 
-
-    def make_tcp_request(self, room_name, operation, state, user_name, password, token=""):
+    def make_tcp_request(
+        self, room_name, operation, state, user_name, password, token=""
+    ):
         # オペレーションペイロードの作成
         operation_payload = {
             "user_name": user_name,
             "token": token,
-            "password": password
+            "password": password,
         }
 
         room_name_bytes = room_name.encode("utf-8")
@@ -75,10 +76,10 @@ class TCPClient:
 
         # ヘッダーの作成
         header = (
-            len(room_name_bytes).to_bytes(1, "big") +
-            operation.to_bytes(1, "big") +
-            state.to_bytes(1, "big") +
-            len(operation_payload_bytes).to_bytes(29, "big")
+            len(room_name_bytes).to_bytes(1, "big")
+            + operation.to_bytes(1, "big")
+            + state.to_bytes(1, "big")
+            + len(operation_payload_bytes).to_bytes(29, "big")
         )
 
         # ヘッダー + ボディ（ルームネームバイト + オペレーションペイロードバイト）
@@ -87,15 +88,15 @@ class TCPClient:
     def send_request(self, data):
         self.sock.sendall(data)
 
-
     def receive_response(self):
         return self.sock.recv(1024)
-
 
     def close(self):
         self.sock.close()
 
+
 # UDPクライアント
+
 
 class UDPClient:
     def __init__(self, address, port):
@@ -108,24 +109,19 @@ class UDPClient:
         token_bytes = token.encode("utf-8")
         user_name_bytes = user_name.encode("utf-8")
         message_bytes = message.encode("utf-8")
-        
+
         header = (
-            len(room_name_bytes).to_bytes(1, "big") +
-            len(user_name_bytes).to_bytes(1, "big") +
-            len(token_bytes).to_bytes(1, "big")
+            len(room_name_bytes).to_bytes(1, "big")
+            + len(user_name_bytes).to_bytes(1, "big")
+            + len(token_bytes).to_bytes(1, "big")
         )
-        
-        body = (
-            room_name_bytes +
-            user_name_bytes +
-            token_bytes +
-            message_bytes
-        )
-        
+
+        body = room_name_bytes + user_name_bytes + token_bytes + message_bytes
+
         packet = header + body
-        
+
         self.sock.sendto(packet, (self.address, self.port))
-    
+
     def receive_messages(self):
         while True:
             try:
@@ -142,7 +138,9 @@ class UDPClient:
                     continue
 
                 room_name = data[3 : 3 + room_name_len].decode("utf-8")
-                user_name = data[3 + room_name_len : 3 + room_name_len + user_name_len].decode("utf-8")
+                user_name = data[
+                    3 + room_name_len : 3 + room_name_len + user_name_len
+                ].decode("utf-8")
                 message = data[min_len:].decode("utf-8")
 
                 # 現在の行を消去してメッセージ表示しプロンプトを再表示
@@ -167,6 +165,7 @@ class UDPClient:
     def close(self):
         self.sock.close()
 
+
 if __name__ == "__main__":
 
     # TCPクライアントの実行
@@ -180,7 +179,9 @@ if __name__ == "__main__":
 
         room_name, password = tcp_client.input_room_name_and_password(operation)
 
-        data = tcp_client.make_tcp_request(room_name, operation, "0", user_name, password)
+        data = tcp_client.make_tcp_request(
+            room_name, operation, "0", user_name, password
+        )
 
         tcp_client.send_request(data)
 
@@ -220,13 +221,15 @@ if __name__ == "__main__":
     udp_client.user_name = user_name
     udp_client.room_name = room_name
     udp_client.token = token
-    
+
     print(f"{user_name} がルーム '{room_name}' に参加しました。")
 
     recv_thread = threading.Thread(target=udp_client.receive_messages, daemon=True)
     recv_thread.start()
 
-    udp_client.send_message(room_name, user_name, token, f"{user_name} がルームに参加しました")
+    udp_client.send_message(
+        room_name, user_name, token, f"{user_name} がルームに参加しました"
+    )
 
     udp_client.input_loop()
 
