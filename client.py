@@ -1,7 +1,7 @@
 import socket
 import json
 import threading
-
+import os
 
 # TCPデータ構造:
 # operation = "操作コード(1 or 2)"
@@ -168,6 +168,26 @@ class UDPClient:
                     3 + room_name_len : 3 + room_name_len + user_name_len
                 ].decode("utf-8")
                 message = data[min_len:].decode("utf-8")
+
+                # ホストでないクライアントのタイムアウトメッセージと処理
+                if message == "SYSTEM_MESSAGE_TIME_OUT":
+                    print("\033[2K\r", end="")
+                    print("-------------------------------------------")
+                    print(f"ルーム '{room_name}' からタイムアウトしました。")
+                    print(f"プログラムを終了します。")
+                    self.sock.close()
+                    os._exit(0)
+
+                # ホストであるクライアントのタイムアウトメッセージと処理
+                elif message == "SYSTEM_HOST_MESSAGE_TIME_OUT":
+                    print("\033[2K\r", end="")
+                    print("------------------------------------------------------")
+                    print(
+                        f"ホストが退出したため ルーム '{room_name}' から退出しました。"
+                    )
+                    print(f"プログラムを終了します。")
+                    self.sock.close()
+                    os._exit(0)
 
                 # 現在の行を消去してメッセージ表示しプロンプトを再表示
                 print("\033[2K\r", end="")

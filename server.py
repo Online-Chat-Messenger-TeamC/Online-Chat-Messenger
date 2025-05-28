@@ -46,11 +46,14 @@ token_list = {}
 list_lock = threading.Lock()
 
 # UDPクライアントのタイムアウト時間
-UDP_CLIENT_TIME_OUT = 20
+UDP_CLIENT_TIME_OUT = 10
 
 # 最終メッセージ送信時間を定期的に確認
 LAST_MESSAGE_TIME = 5
 
+# システムメッセージ
+SYSTEM_MESSAGE = "SYSTEM_MESSAGE_TIME_OUT"
+SYSTEM_HOST_MESSAGE = "SYSTEM_HOST_MESSAGE_TIME_OUT"
 # TCPサーバー
 
 
@@ -289,6 +292,27 @@ class UDPServer:
                 print(f"UDP受信エラー: {e}")
                 self.sock.sendto(f"エラー: {str(e)}".encode("utf-8"), addr)
 
+    def send_system_message(self, room_name, token, user_name, message, address):
+        try:
+            room_name_bytes = room_name.encode("utf-8")
+            token_bytes = token.encode("utf-8")
+            user_name_bytes = user_name.encode("utf-8")
+            message_bytes = message.encode("utf-8")
+
+            header = (
+                len(room_name_bytes).to_bytes(1, "big")
+                + len(user_name_bytes).to_bytes(1, "big")
+                + len(token_bytes).to_bytes(1, "big")
+            )
+
+            body = room_name_bytes + user_name_bytes + token_bytes + message_bytes
+            packet = header + body
+
+            self.sock.sendto(packet, address)
+
+        except Exception as e:
+            print(f"サーバーメッセージ送信エラー: {address}: {e}")
+
     def cleanup_inactive_clients(self):
         while True:
             with list_lock:
@@ -317,6 +341,14 @@ class UDPServer:
                             room_name in self.room_list
                             and token in self.room_list[room_name]["members"]
                         ):
+                            # タイムアウトするクライアントへ送信
+                            self.send_system_message(
+                                room_name,
+                                token,
+                                user_name,
+                                SYSTEM_MESSAGE,
+                                self.room_list[room_name]["members"][token],
+                            )
                             del self.room_list[room_name]["members"][token]
 
                             if is_host:
@@ -329,6 +361,15 @@ class UDPServer:
                                 # ホストが退出したルームのメンバーをすべて削除
                                 for member_token in members_in_room:
                                     if member_token in self.token_list:
+                                        self.send_system_message(
+                                            room_name,
+                                            member_token,
+                                            user_name,
+                                            SYSTEM_HOST_MESSAGE,
+                                            self.room_list[room_name]["members"][
+                                                member_token
+                                            ],
+                                        )
                                         del self.token_list[member_token]
 
                                 del self.room_list[room_name]
