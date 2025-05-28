@@ -341,7 +341,7 @@ class UDPServer:
                             room_name in self.room_list
                             and token in self.room_list[room_name]["members"]
                         ):
-                            # タイムアウトするクライアントへ送信
+                            # タイムアウトのメッセージを他クライアントへ送信
                             members_in_room = list(
                                 self.room_list[room_name]["members"].keys()
                             )
@@ -356,13 +356,6 @@ class UDPServer:
                                             member_token
                                         ],
                                     )
-                            # self.send_system_message(
-                            #     room_name,
-                            #     token,
-                            #     user_name,
-                            #     SYSTEM_MESSAGE,
-                            #     self.room_list[room_name]["members"][token],
-                            # )
                             del self.room_list[room_name]["members"][token]
 
                             if is_host:
@@ -375,6 +368,7 @@ class UDPServer:
                                 # ホストが退出したルームのメンバーをすべて削除
                                 for member_token in members_in_room:
                                     if member_token in self.token_list:
+                                        # ホストの退出メッセージを他クライアントへ送信
                                         self.send_system_message(
                                             room_name,
                                             member_token,

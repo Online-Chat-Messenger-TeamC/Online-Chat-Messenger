@@ -169,7 +169,7 @@ class UDPClient:
                 ].decode("utf-8")
                 message = data[min_len:].decode("utf-8")
 
-                # ホストでないクライアントのタイムアウトメッセージと処理
+                # タイムアウトするクライアントと自身が一致する場合
                 if message == "SYSTEM_MESSAGE_TIME_OUT" and user_name == self.user_name:
                     print("\033[2K\r", end="")
                     print("---------------------------------------------------------")
@@ -181,7 +181,9 @@ class UDPClient:
                     os._exit(0)
 
                 elif (
-                    message == "SYSTEM_MESSAGE_TIME_OUT" and user_name != self.user_name
+                    # タイムアウトするクライアントと自身が一致しない場合
+                    message == "SYSTEM_MESSAGE_TIME_OUT"
+                    and user_name != self.user_name
                 ):
                     print("\033[2K\r", end="")
                     print("---------------------------------------------------------")
@@ -189,7 +191,7 @@ class UDPClient:
                         f"{user_name} が ルーム '{room_name}' からタイムアウトしました。"
                     )
 
-                # ホストであるクライアントのタイムアウトメッセージと処理
+                # ホストであるクライアントが退出する場合
                 elif message == "SYSTEM_HOST_MESSAGE_TIME_OUT":
                     print("\033[2K\r", end="")
                     print("------------------------------------------------------")
@@ -200,6 +202,7 @@ class UDPClient:
                     self.sock.close()
                     os._exit(0)
 
+                # 通常のメッセージが送信された場合
                 elif message:
                     print("\033[2K\r", end="")
                     print(f"{user_name}: {message}")
