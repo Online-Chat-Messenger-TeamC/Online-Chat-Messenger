@@ -170,13 +170,24 @@ class UDPClient:
                 message = data[min_len:].decode("utf-8")
 
                 # ホストでないクライアントのタイムアウトメッセージと処理
-                if message == "SYSTEM_MESSAGE_TIME_OUT":
+                if message == "SYSTEM_MESSAGE_TIME_OUT" and user_name == self.user_name:
                     print("\033[2K\r", end="")
-                    print("-------------------------------------------")
-                    print(f"ルーム '{room_name}' からタイムアウトしました。")
+                    print("---------------------------------------------------------")
+                    print(
+                        f"{user_name} が ルーム '{room_name}' からタイムアウトしました。"
+                    )
                     print(f"プログラムを終了します。")
                     self.sock.close()
                     os._exit(0)
+
+                elif (
+                    message == "SYSTEM_MESSAGE_TIME_OUT" and user_name != self.user_name
+                ):
+                    print("\033[2K\r", end="")
+                    print("---------------------------------------------------------")
+                    print(
+                        f"{user_name} が ルーム '{room_name}' からタイムアウトしました。"
+                    )
 
                 # ホストであるクライアントのタイムアウトメッセージと処理
                 elif message == "SYSTEM_HOST_MESSAGE_TIME_OUT":
@@ -189,10 +200,10 @@ class UDPClient:
                     self.sock.close()
                     os._exit(0)
 
-                # 現在の行を消去してメッセージ表示しプロンプトを再表示
-                print("\033[2K\r", end="")
-                print(f"{user_name}: {message}")
-                print(f"{self.user_name} :> ", end="", flush=True)
+                elif message:
+                    print("\033[2K\r", end="")
+                    print(f"{user_name}: {message}")
+                    print(f"{self.user_name} :> ", end="", flush=True)
 
             except Exception as e:
                 print(f"\n[受信エラー]: {e}")

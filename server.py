@@ -46,10 +46,10 @@ token_list = {}
 list_lock = threading.Lock()
 
 # UDPクライアントのタイムアウト時間
-UDP_CLIENT_TIME_OUT = 120
+UDP_CLIENT_TIME_OUT = 10
 
 # 最終メッセージ送信時間を定期的に確認
-LAST_MESSAGE_TIME = 20
+LAST_MESSAGE_TIME = 5
 
 # システムメッセージ
 SYSTEM_MESSAGE = "SYSTEM_MESSAGE_TIME_OUT"
@@ -342,13 +342,27 @@ class UDPServer:
                             and token in self.room_list[room_name]["members"]
                         ):
                             # タイムアウトするクライアントへ送信
-                            self.send_system_message(
-                                room_name,
-                                token,
-                                user_name,
-                                SYSTEM_MESSAGE,
-                                self.room_list[room_name]["members"][token],
+                            members_in_room = list(
+                                self.room_list[room_name]["members"].keys()
                             )
+                            for member_token in members_in_room:
+                                if member_token in self.token_list:
+                                    self.send_system_message(
+                                        room_name,
+                                        member_token,
+                                        user_name,
+                                        SYSTEM_MESSAGE,
+                                        self.room_list[room_name]["members"][
+                                            member_token
+                                        ],
+                                    )
+                            # self.send_system_message(
+                            #     room_name,
+                            #     token,
+                            #     user_name,
+                            #     SYSTEM_MESSAGE,
+                            #     self.room_list[room_name]["members"][token],
+                            # )
                             del self.room_list[room_name]["members"][token]
 
                             if is_host:
