@@ -46,10 +46,10 @@ token_list = {}
 list_lock = threading.Lock()
 
 # UDPクライアントのタイムアウト時間
-UDP_CLIENT_TIME_OUT = 10
+UDP_CLIENT_TIME_OUT = 120
 
 # 最終メッセージ送信時間を定期的に確認
-LAST_MESSAGE_TIME = 5
+LAST_MESSAGE_TIME = 20
 
 # システムメッセージ
 SYSTEM_MESSAGE = "SYSTEM_MESSAGE_TIME_OUT"
