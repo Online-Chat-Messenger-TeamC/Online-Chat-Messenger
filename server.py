@@ -4,15 +4,6 @@ import secrets
 import datetime
 import threading
 
-# TCPデータ構造:
-# operation = "操作コード(1 or 2)"
-# state = "状態コード(0 ~ 2)"
-# room_name = "ルーム名"
-# operation_payload = {
-#     user_name = "ユーザー名"
-#     token = "トークン"
-#     password = "パスワード(平文)"
-# }
 
 # rooms_list = {
 #     "ルーム名A": {
@@ -60,7 +51,11 @@ UDP_CLIENT_TIME_OUT = 120
 # 最終メッセージ送信時間を定期的に確認
 LAST_MESSAGE_TIME = 20
 
+# システムメッセージ
+SYSTEM_MESSAGE = "SYSTEM_MESSAGE_TIME_OUT"
+SYSTEM_HOST_MESSAGE = "SYSTEM_HOST_MESSAGE_TIME_OUT"
 # TCPサーバー
+
 
 class TCPServer:
     def __init__(self, address, port):
@@ -72,7 +67,6 @@ class TCPServer:
 
         self.rooms_list = rooms_list
         self.token_list = token_list
-
 
     def recieve_request(self):
         print(f"TCPサーバー起動 {self.address}:{self.port}")
@@ -98,7 +92,6 @@ class TCPServer:
                 operation_payload_bytes = client_socket.recv(operation_payload_len)
                 operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))
 
-
                 response = {}
 
                 user_name = operation_payload.get("user_name")
@@ -112,7 +105,7 @@ class TCPServer:
                                 "message": f"ルーム名 '{room_name}' は存在します。",
                                 "operation": operation,
                                 "state": 1,
-                                "user_name": user_name
+                                "user_name": user_name,
                             }
                         else:
                             new_token = secrets.token_urlsafe(32)
@@ -120,14 +113,14 @@ class TCPServer:
 
                             self.rooms_list[room_name] = {
                                 "members": {new_token: (client_address[0], udp_port)},
-                                "password": password
+                                "password": password,
                             }
 
                             self.token_list[new_token] = {
                                 "room_name": room_name,
                                 "user_name": user_name,
                                 "last_access": now,
-                                "is_host": True
+                                "is_host": True,
                             }
 
                             response = {
@@ -135,7 +128,7 @@ class TCPServer:
                                 "operation": operation,
                                 "state": 2,
                                 "user_name": user_name,
-                                "token": new_token
+                                "token": new_token,
                             }
 
                     elif operation == 2:
@@ -144,7 +137,7 @@ class TCPServer:
                                 "message": f"ルーム名 '{room_name}' は存在しません。",
                                 "operation": operation,
                                 "state": 1,
-                                "user_name": user_name
+                                "user_name": user_name,
                             }
                         else:
                             room_info = self.rooms_list[room_name]
@@ -154,19 +147,22 @@ class TCPServer:
                                     "message": "パスワードが違います。",
                                     "operation": operation,
                                     "state": 1,
-                                    "user_name": user_name
+                                    "user_name": user_name,
                                 }
                             else:
                                 new_token = secrets.token_urlsafe(32)
                                 now = datetime.datetime.now()
 
-                                room_info["members"][new_token] = (client_address[0], udp_port)
+                                room_info["members"][new_token] = (
+                                    client_address[0],
+                                    udp_port,
+                                )
 
                                 self.token_list[new_token] = {
                                     "room_name": room_name,
                                     "user_name": user_name,
                                     "last_access": now,
-                                    "is_host": False
+                                    "is_host": False,
                                 }
 
                                 response = {
@@ -174,16 +170,20 @@ class TCPServer:
                                     "operation": operation,
                                     "state": 2,
                                     "user_name": user_name,
-                                    "token": new_token
+                                    "token": new_token,
                                 }
 
                 print("\n---------- リクエスト元のTCPクライアント情報 ----------")
                 print(f"接続元: ('{client_address[0]}', {client_address[1]})")
-                print(f"操作種類: {'ルーム作成' if operation == 1 else 'ルーム参加' if operation == 2 else '不明'}")
+                print(
+                    f"操作種類: {'ルーム作成' if operation == 1 else 'ルーム参加' if operation == 2 else '不明'}"
+                )
                 print(f"ルーム名: {room_name}")
                 print(f"ユーザー名: {user_name}")
                 print(f"パスワード: {password}")
-                print(f"ホスト: {'True' if operation == 1 else 'False' if operation == 2 else '不明'}")
+                print(
+                    f"ホスト: {'True' if operation == 1 else 'False' if operation == 2 else '不明'}"
+                )
                 print(f"状態コード: " + str(response.get("state")))
                 print(f"メッセージ: " + str(response.get("message")))
                 print(f"トークン: " + str(response.get("token")))
@@ -198,7 +198,6 @@ class TCPServer:
             finally:
                 client_socket.close()
 
-
     def send_response(self, data):
         self.sock.sendall(data)
 
@@ -207,6 +206,7 @@ class TCPServer:
 
 
 # UDPサーバー
+
 
 class UDPServer:
     def __init__(self, address, port):
@@ -220,16 +220,17 @@ class UDPServer:
 
     def start(self):
         print(f"UDPサーバー起動 {self.address}:{self.port}")
-        self.cleanup_thread = threading.Thread(target=self.cleanup_inactive_clients, daemon=True)
+        self.cleanup_thread = threading.Thread(
+            target=self.cleanup_inactive_clients, daemon=True
+        )
         self.cleanup_thread.start()
-        
+
         while True:
             data, addr = self.sock.recvfrom(4096)
             ip, udp_port = addr
             print(f"{addr}: {data} を受信(UDP)")
             print(f"受信データ: {data} (長さ: {len(data)})")
 
-            
             try:
                 if not data or len(data) < 2:
                     print("パケットが短すぎます。")
@@ -245,8 +246,17 @@ class UDPServer:
                     continue
 
                 room_name_bytes = data[3 : 3 + room_name_len]
-                user_name_bytes = data[3 + room_name_len : 3 + room_name_len + user_name_len]
-                token_bytes = data[3 + room_name_len + user_name_len : 3 + room_name_len + user_name_len + token_len]
+                user_name_bytes = data[
+                    3 + room_name_len : 3 + room_name_len + user_name_len
+                ]
+                token_bytes = data[
+                    3
+                    + room_name_len
+                    + user_name_len : 3
+                    + room_name_len
+                    + user_name_len
+                    + token_len
+                ]
                 message_bytes = data[3 + room_name_len + user_name_len + token_len :]
 
                 room_name = room_name_bytes.decode("utf-8")
@@ -259,7 +269,7 @@ class UDPServer:
                         print("無効なトークンのメッセージを受信しました。")
                         continue
 
-                    #初回メッセージ受信時にクライアントのUDPポートを登録
+                    # 初回メッセージ受信時にクライアントのUDPポートを登録
                     if self.room_list[room_name]["members"][token] == (ip, None):
                         self.room_list[room_name]["members"][token] = (ip, udp_port)
 
@@ -267,29 +277,54 @@ class UDPServer:
                     self.token_list[token]["last_access"] = datetime.datetime.now()
 
                     # メッセージを同ルームの他クライアントに送信
-                    for member_token, (member_ip, member_udp_port) in self.room_list[room_name]["members"].items():
+                    for member_token, (member_ip, member_udp_port) in self.room_list[
+                        room_name
+                    ]["members"].items():
                         if member_token != token:
                             self.sock.sendto(data, (member_ip, member_udp_port))
 
                     print(f"{user_name}: {message}")
-                    print(f"{room_name} にメッセージを転送しました: {user_name}: {message}")
-
-
+                    print(
+                        f"{room_name} にメッセージを転送しました: {user_name}: {message}"
+                    )
 
             except Exception as e:
                 print(f"UDP受信エラー: {e}")
                 self.sock.sendto(f"エラー: {str(e)}".encode("utf-8"), addr)
-            
+
+    def send_system_message(self, room_name, token, user_name, message, address):
+        try:
+            room_name_bytes = room_name.encode("utf-8")
+            token_bytes = token.encode("utf-8")
+            user_name_bytes = user_name.encode("utf-8")
+            message_bytes = message.encode("utf-8")
+
+            header = (
+                len(room_name_bytes).to_bytes(1, "big")
+                + len(user_name_bytes).to_bytes(1, "big")
+                + len(token_bytes).to_bytes(1, "big")
+            )
+
+            body = room_name_bytes + user_name_bytes + token_bytes + message_bytes
+            packet = header + body
+
+            self.sock.sendto(packet, address)
+
+        except Exception as e:
+            print(f"サーバーメッセージ送信エラー: {address}: {e}")
+
     def cleanup_inactive_clients(self):
         while True:
             with list_lock:
                 now = datetime.datetime.now()
-                tokens_to_remove = [] # 非アクティブな client を格納
+                tokens_to_remove = []  # 非アクティブな client を格納
                 for token, info in list(self.token_list.items()):
                     last_access = info.get("last_access")
-                    if (last_access) and (now - last_access).total_seconds() > UDP_CLIENT_TIME_OUT:
+                    if (last_access) and (
+                        now - last_access
+                    ).total_seconds() > UDP_CLIENT_TIME_OUT:
                         tokens_to_remove.append(token)
-                
+
                 # 削除する client を1人ずつ処理
                 for token in tokens_to_remove:
                     if token in self.token_list:
@@ -297,27 +332,59 @@ class UDPServer:
                         room_name = client_info["room_name"]
                         user_name = client_info["user_name"]
                         is_host = client_info["is_host"]
-                        print(f"クライアント '{user_name}' (token: {token}) をルーム '{room_name}' から削除します（タイムアウト {UDP_CLIENT_TIME_OUT}秒)。")
+                        print(
+                            f"クライアント '{user_name}' (token: {token}) をルーム '{room_name}' から削除します（タイムアウト {UDP_CLIENT_TIME_OUT}秒)。"
+                        )
 
                         # room_list から特定のクライアントのトークンを削除
-                        if room_name in self.room_list and token in self.room_list[room_name]["members"]:
+                        if (
+                            room_name in self.room_list
+                            and token in self.room_list[room_name]["members"]
+                        ):
+                            # タイムアウトのメッセージを他クライアントへ送信
+                            members_in_room = list(
+                                self.room_list[room_name]["members"].keys()
+                            )
+                            for member_token in members_in_room:
+                                if member_token in self.token_list:
+                                    self.send_system_message(
+                                        room_name,
+                                        member_token,
+                                        user_name,
+                                        SYSTEM_MESSAGE,
+                                        self.room_list[room_name]["members"][
+                                            member_token
+                                        ],
+                                    )
                             del self.room_list[room_name]["members"][token]
 
                             if is_host:
-                                print(f"ホストが退出したため、ルーム '{room_name}' を削除します。")
-                                members_in_room = list(self.room_list[room_name]["members"].keys())
+                                print(
+                                    f"ホストが退出したため、ルーム '{room_name}' を削除します。"
+                                )
+                                members_in_room = list(
+                                    self.room_list[room_name]["members"].keys()
+                                )
                                 # ホストが退出したルームのメンバーをすべて削除
                                 for member_token in members_in_room:
                                     if member_token in self.token_list:
+                                        # ホストの退出メッセージを他クライアントへ送信
+                                        self.send_system_message(
+                                            room_name,
+                                            member_token,
+                                            user_name,
+                                            SYSTEM_HOST_MESSAGE,
+                                            self.room_list[room_name]["members"][
+                                                member_token
+                                            ],
+                                        )
                                         del self.token_list[member_token]
 
                                 del self.room_list[room_name]
 
                     del self.token_list[token]
-            
+
             threading.Event().wait(LAST_MESSAGE_TIME)
-
-
 
     def close(self):
         self.sock.close()
@@ -325,12 +392,12 @@ class UDPServer:
 
 if __name__ == "__main__":
 
-# TCPサーバーの実行
+    # TCPサーバーの実行
     tcp_server = TCPServer("127.0.0.1", 8080)
     tcp_thread = threading.Thread(target=tcp_server.recieve_request)
     tcp_thread.start()
 
-# UDPサーバーの実行
+    # UDPサーバーの実行
     udp_server = UDPServer("127.0.0.1", 8080)
     udp_thread = threading.Thread(target=udp_server.start)
     udp_thread.start()
